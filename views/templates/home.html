@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Home — Education Cost Planner{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+  <div class="row align-items-center g-4">
+    <div class="col-lg-7">
+      <div class="hero-eyebrow">Cost of international education, made clear</div>
+      <h1 class="hero-title">Plan your global education budget with clarity.</h1>
+      <p class="hero-subtitle">
+        Connect your real New York living cost to universities worldwide. See an annual breakdown,
+        full program totals, and local currency impact in seconds.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="{{ url_for('budget_planning_view') }}">Open Budget Planner</a>
+        <a class="btn btn-outline-light" href="{{ url_for('university_benchmarking') }}">View Benchmarking</a>
+      </div>
+      <div class="mt-3 d-flex flex-wrap gap-2">
+        <span class="pill-stat">⚖️ Scenario planning by city &amp; currency</span>
+        <span class="pill-stat">📊 Per‑year breakdown for the full program</span>
+      </div>
+    </div>
+    <div class="col-lg-5 mt-3 mt-lg-0">
+      <div class="card-grid">
+        <article class="feature-card">
+          <div class="feature-pill"><span></span>Budget Planning</div>
+          <h3>Personalized cost of attendance</h3>
+          <p>Plug in your New York baseline and compare tuition, rent, insurance, visa, and living costs by year.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-pill"><span></span>Policy Analysis</div>
+          <h3>Understand policy effects</h3>
+          <p>Explore how visa fees, insurance rules, and subsidies change total cost structures across countries.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-pill"><span></span>Economic Research</div>
+          <h3>Macro perspective</h3>
+          <p>Extend the data into broader questions on affordability, inequality, and returns to education.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-pill"><span></span>University Benchmarking</div>
+          <h3>Compare destinations</h3>
+          <p>Benchmark universities on tuition, rent, and cost‑of‑living indices in one consistent view.</p>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

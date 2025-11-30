@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Budget Planning — Education Cost Planner{% endblock %}
+
+{% block content %}
+<section class="section-shell">
+  <div class="section-heading">
+    <h1>Budget Planning</h1>
+    <span class="badge-soft">Driven by International_Education_Costs.csv</span>
+  </div>
+
+  <div class="panel-modern mb-3">
+    <form method="post" class="row gy-3 align-items-end">
+      <div class="col-md-6">
+        <label for="university" class="form-label">University</label>
+        <select id="university" name="university" class="form-select" required>
+          <option value="">— Select a university —</option>
+          {% for uni in universities %}
+            <option value="{{ uni }}" {% if uni == selected_university %}selected{% endif %}>{{ uni }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label for="ny_living" class="form-label">NY baseline living cost (USD / year)</label>
+        <input
+          id="ny_living"
+          name="ny_living"
+          type="number"
+          step="100"
+          min="0"
+          class="form-control"
+          value="{{ ny_living if ny_living is not none else '' }}"
+          placeholder="26000 (default)"
+        >
+        <div class="form-text text-muted small">Optional — leave blank to use a default 26,000 USD/year baseline.</div>
+      </div>
+
+      <div class="col-md-2 d-grid">
+        <button type="submit" class="btn btn-primary">Calculate</button>
+      </div>
+    </form>
+
+    {% if error %}
+      <div class="alert alert-danger mt-3">{{ error }}</div>
+    {% endif %}
+  </div>
+
+  {% if result %}
+    <div class="panel-modern mb-3">
+      <div class="section-heading">
+        <h2>Per-year summary</h2>
+        <small>Duration: {{ result.duration_years }} year{{ 's' if result.duration_years > 1 else '' }}</small>
+      </div>
+      <p class="mb-1">
+        <span class="pill-stat">Living multiplier (NY → destination): {{ "%.3f"|format(result.living_multiplier) }}</span>
+        <span class="pill-stat ms-2">Exchange rate: {{ "%.4f"|format(result.exchange_rate) }} local / USD</span>
+        <span class="pill-stat ms-2">NY baseline used: {{ "{:,.0f}".format(result.ny_baseline) }} USD/year</span>
+      </p>
+      <p class="text-muted small mb-0">
+        Average cost ≈ <strong>{{ "{:,.2f}".format(result.avg_year_usd) }} USD/year</strong>
+        ({{ "{:,.2f}".format(result.avg_month_usd) }} USD/month),
+        or <strong>{{ "{:,.2f}".format(result.avg_year_local) }} local/year</strong>
+        ({{ "{:,.2f}".format(result.avg_month_local) }} local/month).
+      </p>
+    </div>
+
+    {% if charts %}
+      <div class="panel-modern mb-3">
+        <div class="section-heading">
+          <h2>Charts</h2>
+          <small>Visual insight into annual and program costs</small>
+        </div>
+
+        {% if charts.stacked %}
+          <div class="mb-4">
+            <h3 class="h6 mb-2">Component breakdown</h3>
+            <p class="text-muted small mb-2">Stacked annual cost by tuition, rent, insurance, visa, and living.</p>
+            <img
+              src="{{ url_for('static', filename=charts.stacked) }}"
+              class="img-fluid rounded-3 mb-2"
+              alt="Per-year component cost chart"
+            >
+          </div>
+        {% endif %}
+
+        {% if charts.totals_line %}
+          <div class="mb-4">
+            <h3 class="h6 mb-2">Totals over time</h3>
+            <p class="text-muted small mb-2">Total yearly cost in USD across the full program.</p>
+            <img
+              src="{{ url_for('static', filename=charts.totals_line) }}"
+              class="img-fluid rounded-3 mb-2"
+              alt="Total cost per year chart"
+            >
+          </div>
+        {% endif %}
+
+        {% if charts.components_share %}
+          <div>
+            <h3 class="h6 mb-2">Program composition</h3>
+            <p class="text-muted small mb-2">Aggregate program cost split by component.</p>
+            <img
+              src="{{ url_for('static', filename=charts.components_share) }}"
+              class="img-fluid rounded-3 mb-1"
+              alt="Program cost composition chart"
+            >
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="panel-modern">
+      <div class="section-heading mt-1">
+        <h2>Detailed table</h2>
+        <small>Year-by-year cost in USD and local currency</small>
+      </div>
+      <div class="table-responsive mb-3">
+        <table class="table table-striped table-bordered align-middle table-modern">
+          <thead class="table-light">
+            <tr>
+              <th>Year</th>
+              <th>Tuition (USD)</th>
+              <th>Rent (USD)</th>
+              <th>Insurance (USD)</th>
+              <th>Visa (USD)</th>
+              <th>Living (USD)</th>
+              <th>Total (USD)</th>
+              <th>Total (Local)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for y in result.years %}
+              <tr>
+                <td><span class="badge-soft">{{ y.year }}</span></td>
+                <td>{{ "{:,.2f}".format(y.tuition_usd) }}</td>
+                <td>{{ "{:,.2f}".format(y.rent_usd) }}</td>
+                <td>{{ "{:,.2f}".format(y.insurance_usd) }}</td>
+                <td>{{ "{:,.2f}".format(y.visa_usd) }}</td>
+                <td>{{ "{:,.2f}".format(y.living_usd) }}</td>
+                <td>{{ "{:,.2f}".format(y.total_usd) }}</td>
+                <td>{{ "{:,.2f}".format(y.total_local) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-heading mt-2">
+        <h2>Program totals</h2>
+      </div>
+      <ul class="totals-list">
+        <li><strong>Total (USD):</strong> {{ "{:,.2f}".format(result.program_total_usd) }}</li>
+        <li><strong>Total (Local):</strong> {{ "{:,.2f}".format(result.program_total_local) }}</li>
+      </ul>
+    </div>
+  {% endif %}
+</section>
+
+{% endblock %}

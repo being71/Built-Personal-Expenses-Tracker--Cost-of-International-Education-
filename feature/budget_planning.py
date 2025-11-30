@@ -39,8 +39,8 @@ def safe_float(val) -> float:
         return 0.0
 
 
-def compute_budget(row: pd.Series, ny_living: int) -> dict:
-    """Compute per-year and program totals based on a CSV row and NY baseline."""
+def compute_budget(row: pd.Series, ny_living: float) -> dict:
+    """Compute per-year, program totals, and averages based on a CSV row and NY baseline."""
     duration = int(safe_float(row.get("Duration_Years", 1)) or 1)
 
     tuition_per_year = safe_float(row.get("Tuition_USD", 0.0))
@@ -87,13 +87,23 @@ def compute_budget(row: pd.Series, ny_living: int) -> dict:
         total_usd_program += year_total_usd
         total_local_program += year_total_local
 
+    avg_year_usd = total_usd_program / duration if duration > 0 else 0.0
+    avg_month_usd = total_usd_program / (duration * 12.0) if duration > 0 else 0.0
+    avg_year_local = total_local_program / duration if duration > 0 else 0.0
+    avg_month_local = total_local_program / (duration * 12.0) if duration > 0 else 0.0
+
     return {
         "duration_years": duration,
         "living_multiplier": living_multiplier,
         "exchange_rate": exchange_rate,
+        "ny_baseline": float(ny_living),
         "years": years,
         "program_total_usd": total_usd_program,
         "program_total_local": total_local_program,
+        "avg_year_usd": avg_year_usd,
+        "avg_month_usd": avg_month_usd,
+        "avg_year_local": avg_year_local,
+        "avg_month_local": avg_month_local,
     }
 
 

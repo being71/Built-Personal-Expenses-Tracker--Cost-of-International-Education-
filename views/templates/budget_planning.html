@@ -10,8 +10,9 @@
   </div>
 
   <div class="panel-modern mb-3">
-    <form method="post" class="row gy-3 align-items-end">
-      <div class="col-md-6">
+    <form method="post">
+      <div class="row gy-3 align-items-end">
+        <div class="col-md-6">
         <label for="university" class="form-label">University</label>
         <select id="university" name="university" class="form-select" required>
           <option value="">— Select a university —</option>
@@ -19,9 +20,9 @@
             <option value="{{ uni }}" {% if uni == selected_university %}selected{% endif %}>{{ uni }}</option>
           {% endfor %}
         </select>
-      </div>
+        </div>
 
-      <div class="col-md-4">
+        <div class="col-md-4">
         <label for="ny_living" class="form-label">NY baseline living cost (USD / year)</label>
         <input
           id="ny_living"
@@ -33,11 +34,29 @@
           value="{{ ny_living if ny_living is not none else '' }}"
           placeholder="26000 (default)"
         >
-        <div class="form-text text-muted small">Optional — leave blank to use a default 26,000 USD/year baseline.</div>
+        <div class="form-text small ny-baseline-help">Optional — leave blank to use a default 26,000 USD/year baseline.</div>
+        </div>
+
+        <div class="col-md-2 d-grid">
+          <button type="submit" class="btn btn-primary">Calculate</button>
+        </div>
       </div>
 
-      <div class="col-md-2 d-grid">
-        <button type="submit" class="btn btn-primary">Calculate</button>
+      <div class="row gy-3 mt-1">
+        <div class="col-md-4">
+          <label for="inflation" class="form-label">Avg cost-of-living inflation (% / year)</label>
+          <input
+            id="inflation"
+            name="inflation"
+            type="number"
+            step="0.1"
+            min="0"
+            class="form-control"
+            value="{{ inflation if inflation is not none else '' }}"
+            placeholder="3.0 (default)"
+          >
+          <div class="form-text ny-baseline-help small">Optional — leave blank to use 3% per year.</div>
+        </div>
       </div>
     </form>
 
@@ -56,8 +75,11 @@
         <span class="pill-stat">Living multiplier (NY → destination): {{ "%.3f"|format(result.living_multiplier) }}</span>
         <span class="pill-stat ms-2">Exchange rate: {{ "%.4f"|format(result.exchange_rate) }} local / USD</span>
         <span class="pill-stat ms-2">NY baseline used: {{ "{:,.0f}".format(result.ny_baseline) }} USD/year</span>
+        {% if result.inflation_rate is defined %}
+          <span class="pill-stat ms-2">Inflation: {{ "%.1f"|format(result.inflation_rate * 100) }}% / year</span>
+        {% endif %}
       </p>
-      <p class="text-muted small mb-0">
+      <p class="small ny-baseline-help mb-0">
         Average cost ≈ <strong>{{ "{:,.2f}".format(result.avg_year_usd) }} USD/year</strong>
         ({{ "{:,.2f}".format(result.avg_month_usd) }} USD/month),
         or <strong>{{ "{:,.2f}".format(result.avg_year_local) }} local/year</strong>
@@ -75,7 +97,7 @@
         {% if charts.stacked %}
           <div class="mb-4">
             <h3 class="h6 mb-2">Component breakdown</h3>
-            <p class="text-muted small mb-2">Stacked annual cost by tuition, rent, insurance, visa, and living.</p>
+            <p class="small ny-baseline-help mb-2">Stacked annual cost by tuition, rent, insurance, visa, and living.</p>
             <img
               src="{{ url_for('static', filename=charts.stacked) }}"
               class="img-fluid rounded-3 mb-2"
@@ -87,7 +109,7 @@
         {% if charts.totals_line %}
           <div class="mb-4">
             <h3 class="h6 mb-2">Totals over time</h3>
-            <p class="text-muted small mb-2">Total yearly cost in USD across the full program.</p>
+            <p class="small ny-baseline-help mb-2">Total yearly cost in USD across the full program.</p>
             <img
               src="{{ url_for('static', filename=charts.totals_line) }}"
               class="img-fluid rounded-3 mb-2"
@@ -99,7 +121,7 @@
         {% if charts.components_share %}
           <div>
             <h3 class="h6 mb-2">Program composition</h3>
-            <p class="text-muted small mb-2">Aggregate program cost split by component.</p>
+            <p class="small ny-baseline-help mb-2">Aggregate program cost split by component.</p>
             <img
               src="{{ url_for('static', filename=charts.components_share) }}"
               class="img-fluid rounded-3 mb-1"

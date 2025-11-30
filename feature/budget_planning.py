@@ -39,8 +39,13 @@ def safe_float(val) -> float:
         return 0.0
 
 
-def compute_budget(row: pd.Series, ny_living: float) -> dict:
-    """Compute per-year, program totals, and averages based on a CSV row and NY baseline."""
+def compute_budget(row: pd.Series, ny_living: float, inflation_rate: float = 0.0) -> dict:
+    """Compute per-year, program totals, and averages based on a CSV row and NY baseline.
+
+    inflation_rate is expressed as a decimal (e.g. 0.03 for 3% per year) and is
+    applied only to the living-cost component year over year.
+    """
+
     duration = int(safe_float(row.get("Duration_Years", 1)) or 1)
 
     tuition_per_year = safe_float(row.get("Tuition_USD", 0.0))
@@ -54,9 +59,15 @@ def compute_budget(row: pd.Series, ny_living: float) -> dict:
 
     exchange_rate = safe_float(row.get("Exchange_Rate", 1.0))
 
+    try:
+        inflation_rate = max(0.0, float(inflation_rate or 0.0))
+    except Exception:
+        inflation_rate = 0.0
+
     years = []
     total_usd_program = 0.0
     total_local_program = 0.0
+    living_base = ny_living * living_multiplier
 
     for y in range(1, duration + 1):
         year_tuition = tuition_per_year
@@ -65,7 +76,10 @@ def compute_budget(row: pd.Series, ny_living: float) -> dict:
         year_visa = visa_fee if y == 1 else 0.0
 
         direct_costs = year_tuition + year_rent + year_insurance + year_visa
-        living = ny_living * living_multiplier
+
+        # Apply standardized annual inflation only to living costs
+        inflation_factor = (1.0 + inflation_rate) ** (y - 1)
+        living = living_base * inflation_factor
 
         year_total_usd = direct_costs + living
         year_total_local = year_total_usd * exchange_rate
@@ -96,6 +110,7 @@ def compute_budget(row: pd.Series, ny_living: float) -> dict:
         "duration_years": duration,
         "living_multiplier": living_multiplier,
         "exchange_rate": exchange_rate,
+        "inflation_rate": inflation_rate,
         "ny_baseline": float(ny_living),
         "years": years,
         "program_total_usd": total_usd_program,

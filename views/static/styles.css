@@ -316,7 +316,7 @@ body {
 .table-modern tbody td:nth-child(7),
 .table-modern tbody td:nth-child(8) {
   font-weight: 600;
-  color: #f9fafb;
+  color: #000000;
 }
 
 .badge-soft {
@@ -342,4 +342,8 @@ body {
 
 .section-shell p {
   color: var(--text-muted);
+}
+
+.ny-baseline-help {
+  color: #a9a9a9;
 }

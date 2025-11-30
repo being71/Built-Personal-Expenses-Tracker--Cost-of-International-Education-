@@ -19,6 +19,7 @@ CSV_PATH = os.path.join(BASE_DIR, "International_Education_Costs.csv")
 VIEWS_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(VIEWS_DIR, "static")
 DEFAULT_NY_BASELINE = 26000.0
+DEFAULT_INFLATION = 0.03  # 3% per year
 
 
 def create_app() -> Flask:
@@ -41,10 +42,13 @@ def create_app() -> Flask:
         ny_living = None
         error = None
         charts = None
+        inflation_rate = None
+        inflation_percent = None
 
         if request.method == "POST":
             selected_university = request.form.get("university") or ""
             ny_living_raw = (request.form.get("ny_living") or "").strip()
+            inflation_raw = (request.form.get("inflation") or "").strip()
 
             if ny_living_raw:
                 try:
@@ -60,11 +64,27 @@ def create_app() -> Flask:
                 ny_living = DEFAULT_NY_BASELINE
 
             if not error:
+                if inflation_raw:
+                    try:
+                        inflation_percent = float(inflation_raw)
+                        if inflation_percent < 0:
+                            raise ValueError
+                        inflation_rate = inflation_percent / 100.0
+                    except (TypeError, ValueError):
+                        error = (
+                            "Please enter a valid non-negative percentage for average cost-of-living "
+                            "inflation or leave it blank to use the default 3% per year."
+                        )
+                else:
+                    inflation_rate = DEFAULT_INFLATION
+                    inflation_percent = DEFAULT_INFLATION * 100.0
+
+            if not error:
                 row = find_university(df, selected_university)
                 if row is None:
                     error = "Selected university was not found in the dataset."
                 else:
-                    result = compute_budget(row, ny_living)
+                    result = compute_budget(row, ny_living, inflation_rate=inflation_rate or 0.0)
 
                     charts = generate_insight_charts(result, STATIC_DIR, base_name="budget")
 
@@ -73,6 +93,7 @@ def create_app() -> Flask:
             universities=universities,
             selected_university=selected_university,
             ny_living=ny_living,
+            inflation=inflation_percent,
             result=result,
             error=error,
             charts=charts,

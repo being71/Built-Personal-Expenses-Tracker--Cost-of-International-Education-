@@ -150,11 +150,30 @@ def generate_budget_plot(result: dict, title: str, output_path: str) -> None:
     for i, comp in enumerate(components):
         label = comp.replace("_", " ").title()
         if bottom is None:
-            plt.bar(years_df.index, years_df[comp], label=label, color=colors[i])
+            plt.bar(
+                years_df.index,
+                years_df[comp],
+                label=label,
+                color=colors[i],
+                edgecolor="none",
+                linewidth=0,
+            )
             bottom = years_df[comp].copy()
         else:
-            plt.bar(years_df.index, years_df[comp], bottom=bottom, label=label, color=colors[i])
+            plt.bar(
+                years_df.index,
+                years_df[comp],
+                bottom=bottom,
+                label=label,
+                color=colors[i],
+                edgecolor="none",
+                linewidth=0,
+            )
             bottom = bottom + years_df[comp]
+
+    ax = plt.gca()
+    for spine in ax.spines.values():
+        spine.set_visible(False)
 
     plt.xlabel("Year")
     plt.ylabel("Amount (USD)")
@@ -194,11 +213,29 @@ def generate_insight_charts(result: dict, output_dir: str, base_name: str = "bud
     for i, comp in enumerate(components):
         label = comp.replace("_", " ").title()
         if bottom is None:
-            plt.bar(years_df.index, years_df[comp], label=label, color=colors[i])
+            plt.bar(
+                years_df.index,
+                years_df[comp],
+                label=label,
+                color=colors[i],
+                edgecolor="none",
+                linewidth=0,
+            )
             bottom = years_df[comp].copy()
         else:
-            plt.bar(years_df.index, years_df[comp], bottom=bottom, label=label, color=colors[i])
+            plt.bar(
+                years_df.index,
+                years_df[comp],
+                bottom=bottom,
+                label=label,
+                color=colors[i],
+                edgecolor="none",
+                linewidth=0,
+            )
             bottom = bottom + years_df[comp]
+    ax = plt.gca()
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     plt.xlabel("Year")
     plt.ylabel("Amount (USD)")
     plt.title("Annual cost breakdown by component")
@@ -212,6 +249,9 @@ def generate_insight_charts(result: dict, output_dir: str, base_name: str = "bud
     totals_name = f"{base_name}_totals.png"
     plt.figure(figsize=(7.0, 3.8))
     plt.plot(years_df.index, years_df["total_usd"], marker="o", color="#38bdf8")
+    ax = plt.gca()
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     plt.xlabel("Year")
     plt.ylabel("Total cost (USD)")
     plt.title("Total program cost per year (USD)")
@@ -228,7 +268,16 @@ def generate_insight_charts(result: dict, output_dir: str, base_name: str = "bud
     comp_values = [comp_totals[c] for c in components]
 
     plt.figure(figsize=(7.0, 3.8))
-    bars = plt.bar(comp_labels, comp_values, color="#0ea5e9")
+    bars = plt.bar(
+        comp_labels,
+        comp_values,
+        color="#0ea5e9",
+        edgecolor="none",
+        linewidth=0,
+    )
+    ax = plt.gca()
+    for spine in ax.spines.values():
+        spine.set_visible(False)
     plt.ylabel("Total over program (USD)")
     plt.title("Program cost composition by component")
     plt.xticks(rotation=15, ha="right")

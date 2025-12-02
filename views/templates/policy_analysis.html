@@ -1,20 +1,391 @@
 {% extends "base.html" %}
 
-{% block title %}Policy Analysis — Education Cost Planner{% endblock %}
+{% block title %}Policy Analysis  Education Cost Planner{% endblock %}
 
 {% block content %}
 <section class="section-shell">
-  <div class="section-heading">
-    <h1>Policy Analysis</h1>
-    <small>Understand how rules shape real budgets.</small>
+  {% set has_target = target_annual is defined and default_target is defined %}
+  {% set has_tuition_cut = tuition_cut_percent is defined and tuition_cut_percent is not none %}
+  {% set has_living_subsidy = living_subsidy_percent is defined and living_subsidy_percent is not none %}
+  {% set initial_mode = 'policy-input' if (error or has_tuition_cut or has_living_subsidy or (has_target and target_annual != default_target)) else 'insights' %}
+
+  <button
+    class="btn btn-outline-light btn-sm floating-menu-toggle"
+    type="button"
+    data-bs-toggle="offcanvas"
+    data-bs-target="#policyNavMenu"
+    aria-controls="policyNavMenu"
+  >
+    ☰ Navigation
+  </button>
+
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center section-heading mb-3">
+    <div class="mb-2 mb-md-0">
+      <h1>Policy Analysis</h1>
+      <small>System-level view of affordability and policy gaps.</small>
+    </div>
+    <div class="ms-md-3">
+      <label for="policy-view-mode" class="form-label small mb-1">View</label>
+      <select id="policy-view-mode" class="form-select form-select-sm">
+        <option value="insights" {% if initial_mode == 'insights' %}selected{% endif %}>Insight Charts</option>
+        <option value="policy-input" {% if initial_mode == 'policy-input' %}selected{% endif %}>Policy User Input</option>
+      </select>
+    </div>
   </div>
-  <p>
-    Use this space to study how visa regimes, tuition caps, subsidies, and financial-aid policies
-    change the effective cost of international education across destinations.
-  </p>
-  <p class="text-muted mb-0">
-    Future work: plug in scenario models, policy timelines, and interactive charts based on your CSV and
-    external datasets.
-  </p>
+
+  {% if tables and charts %}
+    <div class="panel-modern mb-3">
+      <p class="mb-1">
+        This view summarises total annual costs across all programmes in
+        <code>International_Education_Costs.csv</code>
+        and derives affordability indices using a baseline New York living cost of
+        <strong>{{ "{:,.0f}".format(ny_living) if ny_living is defined else "26,000" }} USD/year</strong>.
+      </p>
+      <p class="text-muted mb-0 small">
+        Higher affordability index means relatively cheaper options once both direct (tuition, rent, fees) and
+        indirect (living) costs are taken into account.
+      </p>
+    </div>
+
+    <div id="insight-view">
+      {% if charts.cost_components or charts.economic_context or charts.institution_program %}
+        <div class="panel-modern mb-3">
+          <div class="section-heading">
+            <h2>Policy insight charts</h2>
+            <small>Where support and regulation might matter most</small>
+          </div>
+
+          <div class="row gy-3">
+            {% if charts.cost_components %}
+              <div class="col-12">
+                <h3 class="h6 mb-2">Direct vs indirect annual costs</h3>
+                <p class="small ny-baseline-help mb-2">
+                  For the highest-cost programmes: the left chart shows annual total cost split into direct costs (tuition, visa, insurance) and living-related costs (rent + cost-of-living), and the right chart shows what share of the total comes from living vs direct costs.
+                </p>
+                <img
+                  src="{{ url_for('static', filename=charts.cost_components) }}"
+                  class="img-fluid rounded-3"
+                  alt="Direct vs indirect annual cost components and composition"
+                >
+              </div>
+            {% endif %}
+
+            {% if charts.economic_context %}
+              <div class="col-12">
+                <h3 class="h6 mb-2">Economic context</h3>
+                <p class="small ny-baseline-help mb-2">
+                  Each horizontal bar is a country and the label on the side is the country name. The bar length shows its average cost-of-living index (longer = more expensive, shorter = cheaper) and the colour shows affordability (green = more affordable overall, red = less).
+                </p>
+                <img
+                  src="{{ url_for('static', filename=charts.economic_context) }}"
+                  class="img-fluid rounded-3"
+                  alt="Economic context: living-cost index and affordability by country"
+                >
+              </div>
+            {% endif %}
+          </div>
+
+          {% if charts.institution_program %}
+            <div class="mt-4">
+              <h3 class="h6 mb-2">Costs by level and duration</h3>
+              <p class="small ny-baseline-help mb-2">
+                Distribution of annual costs by study level and programme duration, highlighting where outliers sit. Additional panels show how costs change with duration, cost per year, and top programmes within each level.
+              </p>
+              <img
+                src="{{ url_for('static', filename=charts.institution_program) }}"
+                class="img-fluid rounded-3"
+                alt="Annual cost distribution by level and programme duration"
+              >
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if tables.affordability is not none and not tables.affordability.empty %}
+        <div class="panel-modern mb-3">
+          <div class="section-heading">
+            <h2>Most affordable programmes</h2>
+            <small>Top 10 by affordability index</small>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-striped table-bordered align-middle table-modern">
+              <thead class="table-light">
+                <tr>
+                  <th>Country</th>
+                  <th>University</th>
+                  <th>Program</th>
+                  <th>Level</th>
+                  <th>Annual cost (USD)</th>
+                  <th>Affordability index</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for idx, row in tables.affordability.head(10).iterrows() %}
+                  <tr>
+                    <td>{{ row["Country"] }}</td>
+                    <td>{{ row["University"] }}</td>
+                    <td>{{ row["Program"] }}</td>
+                    <td>{{ row["Level"] }}</td>
+                    <td>{{ "{:,.0f}".format(row["total_annual_usd"]) }}</td>
+                    <td>{{ "{:,.1f}".format(row["affordability_index"]) }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if tables.policy_gap is not none and not tables.policy_gap.empty %}
+        <div class="panel-modern">
+          <div class="section-heading">
+            <h2>Policy gap by country &amp; level</h2>
+            <small>Average deviation from median annual cost (same level)</small>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-striped table-bordered align-middle table-modern">
+              <thead class="table-light">
+                <tr>
+                  <th>Country</th>
+                  <th>Level</th>
+                  <th>Avg annual cost (USD)</th>
+                  <th>Avg affordability index</th>
+                  <th>Share above median</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for idx, row in tables.policy_gap.sort_values("avg_total_annual_usd").iterrows() %}
+                  <tr>
+                    <td>{{ row["Country"] }}</td>
+                    <td>{{ row["Level"] }}</td>
+                    <td>{{ "{:,.0f}".format(row["avg_total_annual_usd"]) }}</td>
+                    <td>{{ "{:,.1f}".format(row["avg_affordability_index"]) }}</td>
+                    <td>{{ "{:.0%}".format(row["share_above_median"]) }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div id="policy-input-view" class="d-none">
+      <div class="panel-modern mb-3">
+        <h2 class="h6 mb-2">Scenario: target affordability and policy levers</h2>
+        <p class="small ny-baseline-help mb-2">
+          Choose a target maximum annual cost and simple policy levers.
+          The tables below will recompute gaps after applying these levers.
+        </p>
+
+        <form method="get" class="row gy-2 align-items-end">
+          <div class="col-md-4">
+            <label for="target_annual" class="form-label">Target max annual cost (USD)</label>
+            <input
+              id="target_annual"
+              name="target_annual"
+              type="number"
+              min="0"
+              step="500"
+              class="form-control"
+              value="{{ "{:.0f}".format(target_annual) if target_annual is defined and target_annual else "" }}"
+              placeholder="{{ "{:.0f}".format(default_target) if default_target is defined and default_target else "e.g. 20000" }}"
+            >
+            <div class="form-text small ny-baseline-help">
+              Default is the median annual cost across all programmes.
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <label for="tuition_cut" class="form-label">Tuition discount (%)</label>
+            <input
+              id="tuition_cut"
+              name="tuition_cut"
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              class="form-control"
+              value="{{ "{:.0f}".format(tuition_cut_percent) if tuition_cut_percent is not none else "" }}"
+              placeholder="0"
+            >
+          </div>
+
+          <div class="col-md-3">
+            <label for="living_subsidy" class="form-label">Living-cost subsidy (%)</label>
+            <input
+              id="living_subsidy"
+              name="living_subsidy"
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              class="form-control"
+              value="{{ "{:.0f}".format(living_subsidy_percent) if living_subsidy_percent is not none else "" }}"
+              placeholder="0"
+            >
+          </div>
+
+          <div class="col-md-2 d-grid">
+            <button type="submit" class="btn btn-primary">Update scenario</button>
+          </div>
+        </form>
+
+        {% if error %}
+          <div class="alert alert-danger mt-3">{{ error }}</div>
+        {% endif %}
+      </div>
+
+      {% if scenario_gaps and scenario_gaps.programs is not none and not scenario_gaps.programs.empty %}
+        <div class="panel-modern mt-3">
+          <div class="section-heading">
+            <h2>Gap to target after policy levers</h2>
+            <small>Top programmes still above the target annual cost</small>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-striped table-bordered align-middle table-modern">
+              <thead class="table-light">
+                <tr>
+                  <th>Country</th>
+                  <th>University</th>
+                  <th>Program</th>
+                  <th>Level</th>
+                  <th>Scenario annual cost (USD)</th>
+                  <th>Gap to target (USD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for idx, row in scenario_gaps.programs.head(10).iterrows() %}
+                  {% if row["gap_to_target_usd"] > 0 %}
+                    <tr>
+                      <td>{{ row["Country"] }}</td>
+                      <td>{{ row["University"] }}</td>
+                      <td>{{ row["Program"] }}</td>
+                      <td>{{ row["Level"] }}</td>
+                      <td>{{ "{:,.0f}".format(row["scenario_total_annual_usd"]) }}</td>
+                      <td>{{ "{:,.0f}".format(row["gap_to_target_usd"]) }}</td>
+                    </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if scenario_gaps and scenario_gaps.by_country_level is not none and not scenario_gaps.by_country_level.empty %}
+        {% set has_component_shares = "mean_tuition_share" in scenario_gaps.by_country_level.columns %}
+        <div class="panel-modern mt-3">
+          <div class="section-heading">
+            <h2>Where the gap comes from</h2>
+            <small>Average gap to target and cost composition by country &amp; level</small>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-striped table-bordered align-middle table-modern">
+              <thead class="table-light">
+                <tr>
+                  <th>Country</th>
+                  <th>Level</th>
+                  <th>Avg gap to target (USD)</th>
+                  <th>Share above target</th>
+                  {% if has_component_shares %}
+                    <th>Typical composition</th>
+                  {% endif %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for idx, row in scenario_gaps.by_country_level.iterrows() %}
+                  <tr>
+                    <td>{{ row["Country"] }}</td>
+                    <td>{{ row["Level"] }}</td>
+                    <td>{{ "{:,.0f}".format(row["avg_gap_to_target_usd"]) }}</td>
+                    <td>{{ "{:.0%}".format(row["share_above_target"]) }}</td>
+                    {% if has_component_shares %}
+                      <td>
+                        {{ "{:.0%}".format(row["mean_tuition_share"]) }} tuition,
+                        {{ "{:.0%}".format(row["mean_living_share"]) }} living
+                      </td>
+                    {% endif %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% else %}
+    <p class="text-muted">
+      No data was loaded yet. Make sure <code>International_Education_Costs.csv</code> is present in the project root.
+    </p>
+  {% endif %}
 </section>
+
+<div
+  class="offcanvas offcanvas-start text-bg-dark"
+  tabindex="-1"
+  id="policyNavMenu"
+  aria-labelledby="policyNavMenuLabel"
+>
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="policyNavMenuLabel"></h5>
+    <button
+      type="button"
+      class="btn-close btn-close-white"
+      data-bs-dismiss="offcanvas"
+      aria-label="Close"
+    ></button>
+  </div>
+  <div class="offcanvas-body">
+    <div class="list-group list-group-flush">
+      <a href="{{ url_for('index') }}" class="list-group-item list-group-item-action bg-transparent text-light">
+        Home
+      </a>
+      <a href="{{ url_for('budget_planning_view') }}" class="list-group-item list-group-item-action bg-transparent text-light">
+        Budget Planning
+      </a>
+      <a href="{{ url_for('policy_analysis') }}" class="list-group-item list-group-item-action bg-transparent text-light active">
+        Policy Analysis
+      </a>
+      <a href="{{ url_for('economic_research') }}" class="list-group-item list-group-item-action bg-transparent text-light">
+        Economic Research
+      </a>
+      <a href="{{ url_for('university_benchmarking') }}" class="list-group-item list-group-item-action bg-transparent text-light">
+        University Benchmarking
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var modeSelect = document.getElementById("policy-view-mode");
+    var insights = document.getElementById("insight-view");
+    var policyInput = document.getElementById("policy-input-view");
+
+    if (!modeSelect || !insights || !policyInput) {
+      return;
+    }
+
+    function applyMode(mode) {
+      if (mode === "policy-input") {
+        insights.classList.add("d-none");
+        policyInput.classList.remove("d-none");
+      } else {
+        policyInput.classList.add("d-none");
+        insights.classList.remove("d-none");
+      }
+    }
+
+    applyMode(modeSelect.value || "{{ initial_mode }}");
+
+    modeSelect.addEventListener("change", function () {
+      applyMode(this.value);
+    });
+  });
+</script>
 {% endblock %}

@@ -13,6 +13,7 @@
   --accent-strong: #0ea5e9;
   --text-main: #e5e7eb;
   --text-muted: #9ca3af;
+  --default: #c1c1c1;
   --danger: #f97373;
 }
 
@@ -155,6 +156,23 @@ body {
   color: #f9fafb;
 }
 
+.floating-menu-toggle {
+  position: fixed;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: 1050;
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  background: rgba(15, 23, 42, 0.9);
+  border-color: var(--border-subtle);
+  font-size: 0.85rem;
+}
+
+.floating-menu-toggle:hover {
+  background: rgba(15, 23, 42, 0.98);
+  border-color: var(--accent);
+}
+
 .pill-stat {
   display: inline-flex;
   align-items: center;
@@ -244,14 +262,19 @@ body {
 
 .form-label {
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--default);
+}
+
+.form-control::placeholder {
+  color: var(--default);
+  opacity: 1;
 }
 
 .form-control,
 .form-select {
   background: rgba(15, 23, 42, 0.85);
   border-color: rgba(148, 163, 184, 0.55);
-  color: var(--text-main);
+  color: var(--default);
 }
 
 .form-control:focus,
